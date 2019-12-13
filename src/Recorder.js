@@ -1,6 +1,7 @@
 const electron = window.require('electron');
 const desktopCapturer = electron.desktopCapturer;
 const fs = electron.remote.require('fs');
+const log = electron.remote.require('electron-log')
 function toArrayBuffer(blob, cb) {
     let fileReader = new FileReader();
     fileReader.onload = function() {
@@ -20,12 +21,19 @@ function toBuffer(ab) {
 }
 
 class Recorder{
-    constructor(){
+    constructor(location){
+        log.info("TEST");
         this.recording = false;
         this.active = true;
         this.blobs = [];
         this.recorder = null;
         this.game = null;
+        this.path = location;
+        let date = new Date().getTime();
+        console.log("location is " + location);
+        this.file = `${location}LOL_${date}.webm`;
+        console.log("file is " + this.file);
+
         // this.startRecording = this.startRecording.bind(this);
         // this.handleStream = this.handleStream.bind(this);
         this.stopRecording = this.stopRecording.bind(this);
@@ -67,10 +75,9 @@ class Recorder{
             })
             this.recording = true;
             this.handleStream(stream)
-            console.log("callback: ");
-            console.log(callback);
+            callback(true, this.file)
             if (this.recording){
-                setTimeout(()=>this.stopRecording(callback), 5000);
+                setTimeout(()=>this.stopRecording(), 5000);
             }
         } catch (e) {
             this.handleError(e) 
@@ -81,7 +88,9 @@ class Recorder{
 
     handleStream = function(stream) {
         this.recorder = new MediaRecorder(stream);
+        console.log("here");
         console.log(this.recorder);
+        console.log(electron);
         this.blobs = [];
         this.recorder.ondataavailable = function(event) {
             this.blobs.push(event.data);
@@ -95,28 +104,25 @@ class Recorder{
         console.error('handleUserMediaError', e);
     }
 
-    stopRecording(callback){
+    stopRecording(){
         console.log("Ending Recording")
         this.active = false;
         const save = () =>{
-            toArrayBuffer(new Blob(this.blobs, {type: "video/webm;codecs=vp9"}), function(ab) {
+            toArrayBuffer(new Blob(this.blobs, {type: "video/webm;codecs=vp9"}), (ab)=> {
                 var buffer = toBuffer(ab);
-                let date = new Date().getTime();
-                var file = `./videos/LOL_${date}.webm`;
-                fs.writeFile(file, buffer, function(err) {
+ 
+                fs.writeFile(this.file, buffer, (err) => {
                     if (err) {
                         console.error('Failed to save video ' + err);
                     } else {
-                        console.log('Saved video: ' + file);
-                        callback(file)
+                        console.log('Saved video: ' + this.file);
                     }
                 });
             });
         }
         this.recording = false;
         this.recorder.onstop = save;
-        this.recorder.stop();
-        
+        this.recorder.stop();  
     }
 
 

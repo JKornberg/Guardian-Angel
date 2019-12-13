@@ -14,13 +14,14 @@ class App extends Component{
     constructor(props){
         super(props);
         //this.manageRecording = this.manageRecording.bind(this);
-        this.recorder = new Recorder();
+        this.location = './videos/';
+        this.recorder = new Recorder(this.location);
         this.gameTracker = null;
-        this.location = './videos/metadata.json'
         this.saveMetadata = this.saveMetadata.bind(this);
     }
  
     componentDidMount(){
+        console.log('alive4');
         setInterval(this.checkProcesses, 15000)
         ipcRenderer.on('check-processes', (event, arg) => {
             this.manageRecording(arg);
@@ -32,15 +33,18 @@ class App extends Component{
             if (this.recorder.recording == false){
                 if (arg.length != 0){
                     console.log("Found game starting recording")
-                    this.recorder.startRecording(this.saveMetadata);
-                    this.gameTracker = new LeagueTracker();
+                    this.recorder.startRecording((going, file)=>{
+                        if (going){
+                            this.gameTracker = new LeagueTracker(this.location, file);
+                        }
+                    });
                 }
                 else{
                     console.log("Game not found");
                 }
             } else {
                 if (arg.length == 0){
-                    let file = this.recorder.stopRecording(this.saveMetadata);
+                    let file = this.recorder.stopRecording();
                 }
             }
         }

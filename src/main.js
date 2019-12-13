@@ -41,6 +41,35 @@ function createWindow() {
     })
 }
 
+// Configure Electron Menu
+// const mainMenuTemplate = [{
+//     label: 'File',
+//     submenu : [
+//     {
+//         label : "Settings",
+//         click(){
+//             createSettingsWindow();
+//         }
+//     },
+//     {
+//         label : 'Quit',
+//         click(){
+//         app.quit();
+//         }
+//     }]
+//     }, {
+//         label: 'View',
+//         submenu : [
+//         {
+//             label : "Developer Tools",
+//             click(){
+//                 focusedWindow.toggleDevTools();
+//             }
+//         }]
+//     }
+
+// ]
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -86,10 +115,12 @@ function checkProcesses(event) {
 let fsReadDir = util.promisify(fs.readdir);
 let fsReadFile = util.promisify(fs.readFile);
 
+//Listens for request to load library
 ipcMain.on('load-library', async (event, arg) =>{
     loadLibrary(event);
 })
 
+//reads directory and metadata to fill library
 function loadLibrary(event){
     let filePath = './videos';
     if(fs.existsSync(filePath+'/metadata.json')){
