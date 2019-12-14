@@ -22,7 +22,6 @@ function toBuffer(ab) {
 
 class Recorder{
     constructor(location){
-        log.info("TEST");
         this.recording = false;
         this.active = true;
         this.blobs = [];
@@ -30,9 +29,7 @@ class Recorder{
         this.game = null;
         this.path = location;
         let date = new Date().getTime();
-        console.log("location is " + location);
-        this.file = `${location}LOL_${date}.webm`;
-        console.log("file is " + this.file);
+        this.file = `LOL_${date}.webm`;
 
         // this.startRecording = this.startRecording.bind(this);
         // this.handleStream = this.handleStream.bind(this);
@@ -88,9 +85,6 @@ class Recorder{
 
     handleStream = function(stream) {
         this.recorder = new MediaRecorder(stream);
-        console.log("here");
-        console.log(this.recorder);
-        console.log(electron);
         this.blobs = [];
         this.recorder.ondataavailable = function(event) {
             this.blobs.push(event.data);
@@ -107,22 +101,23 @@ class Recorder{
     stopRecording(){
         console.log("Ending Recording")
         this.active = false;
+        this.recording = false;
+        this.recorder.stop();  
         const save = () =>{
             toArrayBuffer(new Blob(this.blobs, {type: "video/webm;codecs=vp9"}), (ab)=> {
                 var buffer = toBuffer(ab);
  
-                fs.writeFile(this.file, buffer, (err) => {
+                fs.writeFile(this.path + this.file, buffer, (err) => {
                     if (err) {
                         console.error('Failed to save video ' + err);
                     } else {
-                        console.log('Saved video: ' + this.file);
+                        console.log('Saved video: ' + this.path + this.file);
                     }
                 });
             });
         }
-        this.recording = false;
         this.recorder.onstop = save;
-        this.recorder.stop();  
+
     }
 
 

@@ -16,15 +16,17 @@ class App extends Component{
         //this.manageRecording = this.manageRecording.bind(this);
         this.location = './videos/';
         this.recorder = new Recorder(this.location);
-        this.gameTracker = null;
+        this.gameTracker = new LeagueTracker(this.location);
         this.saveMetadata = this.saveMetadata.bind(this);
     }
  
     componentDidMount(){
-        console.log('alive4');
         setInterval(this.checkProcesses, 15000)
         ipcRenderer.on('check-processes', (event, arg) => {
             this.manageRecording(arg);
+        })
+        ipcRenderer.on('refresh-historical', async(event, arg) => {
+            console.log(arg);
         })
     }
 
@@ -32,10 +34,10 @@ class App extends Component{
         if (this.recorder.active){
             if (this.recorder.recording == false){
                 if (arg.length != 0){
-                    console.log("Found game starting recording")
+                    console.log("Found game")
                     this.recorder.startRecording((going, file)=>{
                         if (going){
-                            this.gameTracker = new LeagueTracker(this.location, file);
+                            this.gameTracker.ensureConnection(this.gameTracker.getCurrentMatchData, file);
                         }
                     });
                 }
@@ -58,7 +60,10 @@ class App extends Component{
         ipcRenderer.send('check-processes', null)
     }
 
-    
+   refreshLibrary = function(games){
+       console.log(games);
+       this.gameTracker.ensureConnection(this.gameTracker.getHistoricalMatchData, games);
+   } 
 
 
     render(){
@@ -67,7 +72,7 @@ class App extends Component{
             <div>
             <Link to="/"><h1>Plays</h1></Link>
             <Switch>
-                <Route path="/" exact component ={Library}/>
+                <Route onRefresh = {this.refreshLib} path="/" exact component ={Library}/>
                 <Route path="/player/:id" component ={VideoPlayer}/>
             </Switch>
             </div>
@@ -79,13 +84,3 @@ class App extends Component{
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-

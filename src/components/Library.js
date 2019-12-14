@@ -18,6 +18,7 @@ class Library extends Component {
         }
         this.fsReadDir = util.promisify(fs.readdir);
         this.fsReadFile = util.promisify(fs.readFile);
+        this.onRefresh = this.onRefresh.bind(this);
     }
 
     componentDidMount(){
@@ -25,7 +26,7 @@ class Library extends Component {
         //this.loadData();
         ipcRenderer.send('load-library', null);
         ipcRenderer.on('load-library', (event, arg) =>{
-            console.log('received library');
+            //console.log('received library');
             this.setState({
                 games : arg,
             })
@@ -36,20 +37,27 @@ class Library extends Component {
         ipcRenderer.removeAllListeners('load-library');
     }
 
+    onRefresh = function(){
+        ipcRenderer.send('load-library', null);
+        console.log(this.state.games);
+        ipcRenderer.send('refresh-historical', this.state.games);
+    }
+
     render() {
         const games = this.state.games.map((game) =>
-            <div key={game.key}>
+            <div key={game.file}>
                 <Link to={{
                     pathname: `player/${game.key}`,
                     state: {
                         game : game
                     }
-                }}><h1>{game.key}</h1></Link>
+                }}><h1>{game.file}</h1></Link>
             </div>
          )
         return (
         <div>
-            <h3>Title</h3>
+            <h3>Library</h3>
+            <button type="btn" onClick = {this.onRefresh} className ="btn btn-primary">Refresh</button>
             {games}
         </div>
         );

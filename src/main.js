@@ -5,15 +5,13 @@ const app = electron.app;
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow;
 const fs = require('fs');
-const path = require('path');
 const url = require('url');
 const find = require('find-process');
 const util = require('util');
-
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
+let path = './videos/';
 app.commandLine.appendSwitch('ignore-certificate-errors', 'true');
 
 function createWindow() {
@@ -42,33 +40,33 @@ function createWindow() {
 }
 
 // Configure Electron Menu
-// const mainMenuTemplate = [{
-//     label: 'File',
-//     submenu : [
-//     {
-//         label : "Settings",
-//         click(){
-//             createSettingsWindow();
-//         }
-//     },
-//     {
-//         label : 'Quit',
-//         click(){
-//         app.quit();
-//         }
-//     }]
-//     }, {
-//         label: 'View',
-//         submenu : [
-//         {
-//             label : "Developer Tools",
-//             click(){
-//                 focusedWindow.toggleDevTools();
-//             }
-//         }]
-//     }
+const mainMenuTemplate = [{
+    label: 'File',
+    submenu : [
+    {
+        label : "Settings",
+        click(){
+            createSettingsWindow();
+        }
+    },
+    {
+        label : 'Quit',
+        click(){
+        app.quit();
+        }
+    }]
+    }, {
+        label: 'View',
+        submenu : [
+        {
+            label : "Developer Tools",
+            click(){
+                focusedWindow.toggleDevTools();
+            }
+        }]
+    }
 
-// ]
+]
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -111,6 +109,11 @@ function checkProcesses(event) {
 
 }
 
+// ipcMain.on('Track League', async (event, file) => {
+//     let gameTracker = new LeagueTracker();
+//     gameTracker.getCurrentMatchData();
+// })
+
 
 let fsReadDir = util.promisify(fs.readdir);
 let fsReadFile = util.promisify(fs.readFile);
@@ -122,21 +125,20 @@ ipcMain.on('load-library', async (event, arg) =>{
 
 //reads directory and metadata to fill library
 function loadLibrary(event){
-    let filePath = './videos';
-    if(fs.existsSync(filePath+'/metadata.json')){
-        let dir = fsReadDir(filePath)
-        let data = fsReadFile(filePath+'/metadata.json')
+    if(fs.existsSync(path+'currentMatch.json')){
+        let dir = fsReadDir(path)
+        let data = fsReadFile(path+'currentMatch.json')
         let promises = [dir, data];
         Promise.all(promises)
         .then((results) => {
-            combineData(results[0],results[1], event);
+            combineData(results[0],JSON.parse(results[1]), event);
         })
         .catch((err) => {
             console.log(err);
         })} 
     else{
         console.log("making file");
-        fs.writeFile(filePath+'/metadata.json', JSON.stringify({}), loadLibrary);
+        fs.writeFile(path+'currentMatch.json', JSON.stringify({}), ()=>loadLibrary(event));
     }
 }
 
@@ -150,23 +152,22 @@ function combineData(files, metadata, event){
             if (ext != 'mp4' && ext!= 'webm'){
                 continue;
             }
-            let game = {
-                key : key,
-                file : file,
-            }
             key += 1;
-            if (metadata[f]){
-                let m = metadata[f];
+            let game = {};
+            if (metadata[file]){
+                let m = metadata[file];
                 game = {
-                    id : m.game.gameData.gameId,
+                    id : m.details.gameId,
                     game : m.game,
                     details : m.details,
+                    parsed : m.parsed
                 }
             }
-            let stats = fs.stat(path+'videos/'+file, function(error, data){
+            game['file'] = file;
+            let stats = fs.stat(path+file, function(error, data){
                 if (data){
-                    game['date'] = data['birthtime'];
-                    game['size'] = data['size']
+                    data['date'] = data['birthtime'];
+                    data['size'] = data['size']
                 }
             })
             games.push(game);
@@ -174,6 +175,28 @@ function combineData(files, metadata, event){
         event.reply('load-library', games);
 }
 
+ipcMain.on('refresh-historical', async( event, arg) => {
+    console.log('refreshing historical data');
+    event.reply('refresh-historical',arg);
+})
+
+ipcMain.on('Save Historical', async (event, arg) =>{
+    console.log("Saving historical data");
+    saveHistorical(arg);
+});
+
+function saveHistorical(object){
+    if (!fs.existsSync(path+'historicalMatch.json')){
+        fs.writeFile(path+'historicalMatch.json', JSON.stringify({}), saveHistorical(object));
+    }
+    fsReadFile(path+'historicalMatch.json')
+    .then((resp) => {
+        for (key in object){
+            resp[key] = object[key];
+        }
+        fs.writeFile(path+'historicalMatch.json', JSON.stringify(resp), ()=>{console.log("SAVED HISTORICAL")})
+    })
+}
 
 
 
